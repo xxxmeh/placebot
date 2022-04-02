@@ -19,8 +19,6 @@ function sleep(ms) {
     });
 }
 
-console.log("hello world");
-
 function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -168,6 +166,8 @@ browser.runtime.onMessage.addListener(function (msg, sendResponse) {
         run(token).then(result => console.log(result));    
     }
 });
+
+console.log("hello world");
 
 // Refresh page after an hour (I think the token is only available when loading the page, and the token might expire)
 setInterval(function () { window.location.reload(); }, 3600000);
