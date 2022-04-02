@@ -30,7 +30,7 @@ async function run() {
     running = true;
     alert("The bot is running");
 
-    for (let i = 0; i < 10000; i++) {
+    main_loop: for (let i = 0; i < 10000; i++) {
         let image = `gggggggggggggggggggggggggggggggggggggggggggggg
         gggggggggggggggggggggggggggggggggggggggggggggg
         ggggrrrrrrrrggggggrrrrgggggggggggggggggggggggg
@@ -119,7 +119,7 @@ async function run() {
             } else if (lines[rows][chars] == "q") { // black
                 color = 27
             } else { // if it doesnt recognize the character it just puts black
-                color = 27
+                continue main_loop
             }
     
     /*
