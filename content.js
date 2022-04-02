@@ -5,8 +5,8 @@ if (typeof browser === "undefined") {
 var token = undefined;
 var running = false;
 
-let beginx = 781
-let beginy = 78
+let beginx = 913
+let beginy = 422
 let width = 46
 let height = 46
 let color = 8
