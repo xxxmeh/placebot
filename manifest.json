@@ -1,0 +1,25 @@
+{
+  "description": "Export your Reddit token",
+  "manifest_version": 3,
+  "name": "token-exporter",
+  "version": "1.0",
+
+  "permissions": [
+    "webRequest"
+  ],
+
+  "host_permissions": [
+    "https://*.reddit.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://www.reddit.com/r/place*"],
+      "js": ["content.js"]
+    }
+  ]
+}
