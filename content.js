@@ -24,7 +24,7 @@ console.log("hello world");
 // All this code was copied from 2b2t's bot
 async function run() {
     running = true;
-    console.log("running");
+    alert("The bot is running");
 
     for (let i = 0; i < 10000; i++) {
         let image = `gggggggggggggggggggggggggggggggggggggggggggggg
