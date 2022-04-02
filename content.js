@@ -7,8 +7,8 @@ var running = false;
 
 let beginx = 781
 let beginy = 78
-let width = 100
-let height = 100
+let width = 46
+let height = 46
 let color = 8
 let rows = 0
 let chars = 0
