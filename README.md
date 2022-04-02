@@ -8,3 +8,7 @@
 - Load the unpacked extension. You might have to enable developer mode
 - Go to /r/place
 - You should see an alert message saying the bot is running, if you don't, read the console
+
+## Use multiple accounts
+
+You can use multiple accounts by opening multiple browser windows in private mode.
