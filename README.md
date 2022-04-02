@@ -1,5 +1,7 @@
 # placebot
 
+**WARNING: ONLY REDDIT ACCOUNTS WITH VERIFIED EMAIL ARE SUPPORTED.** If your account has a 20 minutes rate limit, this will not work well.
+
 ## How to use
 
 - Use a chromium based browser
