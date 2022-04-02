@@ -9,7 +9,7 @@
 - Go to your extension page (chrome://extensions/)
 - Load the unpacked extension. You might have to enable developer mode
 - Go to /r/place
-- You should see an alert message saying the bot is running, if you don't, read the console
+- You should see an alert message saying the bot is running. If it doesn't, reload the extension and the page (please fix the issue if you know how to)
 
 ## Use multiple accounts
 
