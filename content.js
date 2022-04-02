@@ -7,8 +7,8 @@ var running = false;
 
 let beginx = 781
 let beginy = 78
-let x = beginx
-let y = beginy
+let width = 100
+let height = 100
 let color = 8
 let rows = 0
 let chars = 0
@@ -20,6 +20,12 @@ function sleep(ms) {
 }
 
 console.log("hello world");
+
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 // All this code was copied from 2b2t's bot
 async function run() {
@@ -78,8 +84,10 @@ async function run() {
     
         for (const account of accounts) {
             const lines = image.split('\n')
-            x = chars + beginx
-            y = rows + beginy
+            x = getRandomInt(beginx, beginx + width - 1)
+            y = getRandomInt(beginy, beginy + height - 1)
+            rows = x - beginx
+            chars = y - beginy
             console.log(`(${x},${y})`)
     
             if (lines[rows][chars] == "r") { // red
@@ -140,25 +148,12 @@ async function run() {
             let date_ob = new Date();
             console.log(" at " + date_ob.getHours() + ":" + date_ob.getMinutes() + " account: " + account)
     
-            if (chars > lines[rows].length) {
-                rows += 1
-                chars = 0
-                console.log("new line")
-            }
             if (postString.includes("error")){
                 console.log("error: ")
                 console.log(postString)
-    
             } else {
                 console.log(postString.includes("error"))
-                chars += 1
             }
-            
-            if (rows > lines.length){
-                rows = 0
-                chars = 0
-            }
-            console.log("\n")
         }
         await sleep(302000) //wait 5 mins and 2 seconds for safety
     }
