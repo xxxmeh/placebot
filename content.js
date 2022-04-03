@@ -90,18 +90,19 @@ function fetch_canvas_url(cont, auth) {
 	}
 }
 
-function get_board_image(cont, auth, x, y, dx, dy) {
+function get_board_image(cont, auth) {
 	fetch_canvas_url((url) => {
-		browser.runtime.sendMessage({contentScriptQuery: 'getImage', url, x, y, dx, dy }, cont)
+		browser.runtime.sendMessage({contentScriptQuery: 'getImage', url, x: design.x, y: design.y, dx: design.width, dy: design.height }, cont)
 	}, auth)
 }
 
 function get_reference_image(cont) {
-	browser.runtime.sendMessage({contentScriptQuery: 'getImage', url: design.url, x: design.x, y: design.y, dx: design.width, dy: design.height }, cont);
+	browser.runtime.sendMessage({contentScriptQuery: 'getImage', url: design.url, x: 0, y: 0, dx: design.width, dy: design.height }, cont);
 }
 
 const MAX_CHANGES = 1000;
-function calculate_changes(current_image, reference_image) {
+// Takes two arrays of pixels
+function calculate_changes(cur_array, ref_array) {
 	function toHexString(byteArray) {
 		var s = '0x';
 		byteArray.forEach(function(byte) {
@@ -111,14 +112,12 @@ function calculate_changes(current_image, reference_image) {
 	}
 	
 	var changes = []
-	let cur_array = Object.values(current_image.data);
-	let ref_array = Object.values(reference_image.data);
 	for (let i = 0; i < cur_array.length; i += 4) {
 		if (changes.length >= MAX_CHANGES) { return changes }
-		let cur_array_slice = cur_array.slice(i, i + 4);
-		let ref_array_slice = ref_array.slice(i, i + 4);
+		let cur_array_slice = cur_array.slice(i, i + 3);
+		let ref_array_slice = ref_array.slice(i, i + 3);
 		if (cur_array_slice.every((value, index) => value !== ref_array_slice[index])) {
-			let hex_color = toHexString(ref_array.slice(i, i + 4)).slice(2, 8)
+			let hex_color = toHexString(ref_array_slice).slice(2)
 			let color = color_map[hex_color.toUpperCase()];
 			if (color) {
 				let col_index = Math.floor(i / 4);
@@ -153,7 +152,8 @@ function check_map_and_place(cont) {
 			console.log("loaded board image")
 			get_reference_image((reference_image) => {
 				console.log("Found both images")
-				let changes = calculate_changes(current_image, reference_image);
+				let changes = calculate_changes(current_image, reference_image)
+				console.log("Found changes:", changes)
 				if (changes.length > 0) {
 					console.log(changes.length + " changes found");
 					if (changes.length >= MAX_CHANGES) {
@@ -169,7 +169,8 @@ function check_map_and_place(cont) {
 					change.x += design.x;
 					change.y += design.y;
 					console.log("Changing Pixel:", change);
-					send_change((resp) => { cont() }, change.x, change.y, change.color)
+					cont()
+					// send_change((resp) => { cont() }, change.x, change.y, change.color)
 				} else {
 					console.log("No unmatching pixels found")
 					cont()
@@ -195,14 +196,16 @@ update_design(timeout_map_check)
 
 console.log("Hello Place!");
 
+var just_changed = false;
 function timeout_map_check() {
 	if (design !== undefined && token !== undefined) {
+		if (just_changed == false) { check_map_and_place(timeout_map_check); just_changed = true; return }
 		setTimeout(() => {
 			check_map_and_place(() => {
 				console.log("Completed map check")
 				timeout_map_check()
 			})
-		}, 10000);
+		}, 3000000);
 	}
 }
 // Refresh page after an hour (I think the token is only available when loading the page, and the token might expire)
