@@ -51,7 +51,8 @@ function update_design(cont) {
 	})
 }
 
-function fetch_canvas_url(cont, auth) {
+function fetch_canvas_urls(cont, auth) {
+	let urls = []
 	ws = new WebSocket("wss://gql-realtime-2.reddit.com/query");
 	ws.onerror = function(err) { console.log(err) }
 	ws.onopen = function () {
@@ -59,9 +60,9 @@ function fetch_canvas_url(cont, auth) {
 			console.log("received ws message: ", JSON.parse(msg.data));
 			if (JSON.parse(msg.data)["type"] == "ka") {
 				ws.onmessage = function (msg) {
-					ws.close()
 					let image_url = JSON.parse(msg.data).payload.data.subscribe.data.name;
-					cont(image_url)
+					urls.push(image_url);
+					if (urls.length >= 2) { ws.close();  cont(urls) }
 				}
 				ws.send(JSON.stringify({
 					"id": "2",
@@ -81,6 +82,24 @@ function fetch_canvas_url(cont, auth) {
 						"query": "subscription replace($input: SubscribeInput!) {\n  subscribe(input: $input) {\n    id\n    ... on BasicMessage {\n      data {\n        __typename\n        ... on FullFrameMessageData {\n          __typename\n          name\n          timestamp\n        }\n        ... on DiffFrameMessageData {\n          __typename\n          name\n          currentTimestamp\n          previousTimestamp\n        }\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
 					},
 				}))
+				ws.send(JSON.stringify({
+					"id": "3",
+					"type": "start",
+					"payload": {
+						"variables": {
+							"input": {
+								"channel": {
+									"teamOwner": "AFD2022",
+									"category": "CANVAS",
+									"tag": "1",
+								}
+							}
+						},
+						"extensions": {},
+						"operationName": "replace",
+						"query": "subscription replace($input: SubscribeInput!) {\n  subscribe(input: $input) {\n    id\n    ... on BasicMessage {\n      data {\n        __typename\n        ... on FullFrameMessageData {\n          __typename\n          name\n          timestamp\n        }\n        ... on DiffFrameMessageData {\n          __typename\n          name\n          currentTimestamp\n          previousTimestamp\n        }\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
+					},
+				}))
 			}
 		}
 		ws.send(JSON.stringify({
@@ -91,8 +110,9 @@ function fetch_canvas_url(cont, auth) {
 }
 
 function get_board_image(cont, auth) {
-	fetch_canvas_url((url) => {
-		browser.runtime.sendMessage({contentScriptQuery: 'getImage', url, x: design.x, y: design.y, dx: design.width, dy: design.height }, cont)
+	fetch_canvas_urls((urls) => {
+		console.log("fetching board urls", urls)
+		browser.runtime.sendMessage({ contentScriptQuery: 'getBoard', urls, x: design.x, y: design.y, dx: design.width, dy: design.height }, cont)
 	}, auth)
 }
 
