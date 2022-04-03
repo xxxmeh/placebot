@@ -38,7 +38,7 @@ color_map = {
 
 var stop_running = false;
 function update_design(cont) {
-	fetch("https://raw.githubusercontent.com/zyansheep/placebot/master/design.json").then((resp) => {
+	fetch("https://raw.githubusercontent.com/zyansheep/placebot/master/design.json", {cache: "no-store"}).then((resp) => {
 		if (!resp.ok) {
 			throw new Error("HTTP error " + resp.status);
 		}
