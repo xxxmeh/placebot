@@ -6,17 +6,14 @@ var design = undefined
 var token = undefined;
 const version = 1.0
 
-// Functional programming is neat
-function curry(func) {
-	return function curried(...args) {
-		if (args.length >= func.length) {
-			return func.apply(this, args);
-		} else {
-			return function(...args2) {
-				return curried.apply(this, args.concat(args2));
-			}
-		}
-	};
+function notif(notification) {
+	let elem = document.getElementsByTagName("h1")[0]
+	elem.innerText = notification;
+	elem.style.color = "red"
+}
+function notif_sub(notification) {
+	let elem = document.getElementsByTagName("h2")[0]
+	elem.innerText = notification;
 }
 
 color_map = {
@@ -38,6 +35,7 @@ color_map = {
     "FFFFFF": 31,  // white
 }
 
+var stop_running = false;
 function update_design(cont) {
 	fetch("https://raw.githubusercontent.com/zyansheep/placebot/master/design.json").then((resp) => {
 		if (!resp.ok) {
@@ -48,9 +46,10 @@ function update_design(cont) {
 	}).then(json => {
 		design = json
 		console.log("Received design:", design)
-		if (design.stableVersion != version){
-			console.log("YOUR VERSION IS OUTDATED! please update to the newest one!")
-			console.log("https://github.com/zyansheep/placebot")
+		if (design.stableVersion != version) {
+			notif("YOUR VERSION IS OUTDATED! PLEASE UPDATE TO THE NEWEST ONE")
+			notif_sub(`<a href="https://github.com/zyansheep/placebot">https://github.com/zyansheep/placebot</a>`);
+			stop_running = true
 		}
 		cont()
 	})
@@ -79,7 +78,7 @@ function fetch_canvas_urls(cont, auth) {
 	let packet_id = 0;
 	let urls = { "first": undefined, "second": undefined}
 	ws = new WebSocket("wss://gql-realtime-2.reddit.com/query");
-	ws.onerror = function(err) { console.log(err) }
+	ws.onerror = function (err) { console.log(err); notif_sub("WEBSOCKET ERROR (check console)") }
 	ws.onopen = function () {
 		ws.onmessage = function (msg) {
 			console.log("received ws message: ", JSON.parse(msg.data));
@@ -194,7 +193,10 @@ function send_change(cont, x, y, color) {
 		}).then((resp) => resp.json()).then((json) => {
 			if (json.data) {
 				pixels_placed_counter += 1;
-				document.getElementsByTagName("h1")[0].innerText = `Pixels Placed: ${pixels_placed_counter}`;
+				notif(`Pixels Placed: ${pixels_placed_counter}`)
+				notif_sub(`Last changed pixel: (${x}, ${y}) to color id ${color}`)
+			} else {
+				notif_sub(`Failed to change pixel (Waiting for timeout)`)
 			}
 			cont(json)
 		})
@@ -216,9 +218,9 @@ function check_map_and_place(cont) {
 					console.log(changes.length + " changes found");
 					if (changes.length >= MAX_CHANGES) {
 						if (override_ineffective) {
-							console.log("There are many changes, but we persevere anyway")
+							notif_sub("There are a lot of changes")
 						} else {
-							console.log("There are too many changes, the design may be old")
+							notif_sub("There are too many changes, check if the design is old or invalid or change the MAX_CHANGES variable")
 							cont()
 							return
 						}
@@ -254,7 +256,7 @@ browser.runtime.onMessage.addListener(function (msg, sendResponse) {
 update_design(timeout_map_check)
 
 console.log("Hello Place!");
-document.getElementsByTagName("h1")[0].innerText = "Thank you for contributing to Monero's r/place! The bot is running.";
+notif("Thank you for contributing to Monero's r/place! The bot is running.");
 
 var pixels_placed_counter = 0
 var just_changed = false;
@@ -263,16 +265,16 @@ function timeout_map_check() {
 		if (just_changed == false) {
 			just_changed = true;
 			check_map_and_place(() => {
-				console.log("completed map check"); timeout_map_check()
+				console.log("Completed first map check"); timeout_map_check()
 			});
 			return
 		}
+		if (stop_running) { return }
 		setTimeout(() => {
 			check_map_and_place(() => {
 				console.log("Completed map check")
-				timeout_map_check()
+				update_design(timeout_map_check)
 			})
-			update_design()
 		}, 301000);
 	}
 }
