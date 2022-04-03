@@ -251,7 +251,7 @@ function timeout_map_check() {
 				console.log("Completed map check")
 				timeout_map_check()
 			})
-		}, 300000);
+		}, 301000);
 	}
 }
 // Refresh page after an hour (I think the token is only available when loading the page, and the token might expire)
