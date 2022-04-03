@@ -243,7 +243,8 @@ function check_map_and_place(cont) {
                             }
                             else if (resp.data) {
                                 pixels_placed_counter += 1;
-                                notif(`Pixels Placed: ${pixels_placed_counter}`);
+								notif(`Pixels Placed: ${pixels_placed_counter}`);
+								notif_sub(`Last Placed at (${change.x}, ${change.y}), color: ${change.color}`)
                                 let innerData = resp.data.act.data;
                                 if (innerData.length === 1) {
                                     if(innerData[0].data) {
