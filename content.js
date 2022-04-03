@@ -236,7 +236,6 @@ browser.runtime.onMessage.addListener(function (msg, sendResponse) {
 	if (msg.token) {
 		token = msg.token;
 		console.log("Extracted token: ", token);
-		timeout_map_check()
 	}
 });
 update_design(timeout_map_check)
