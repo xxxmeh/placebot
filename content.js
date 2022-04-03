@@ -1,13 +1,56 @@
 if (typeof browser === "undefined") {
-    var browser = chrome;
+	var browser = chrome;
 }
 
-function fetch_design(cont) {
-    
-}
-
+var design = undefined
 var token = undefined;
-var running = false;
+
+// Functional programming is neat
+function curry(func) {
+	return function curried(...args) {
+		if (args.length >= func.length) {
+			return func.apply(this, args);
+		} else {
+			return function(...args2) {
+				return curried.apply(this, args.concat(args2));
+			}
+		}
+	};
+}
+
+color_map = {
+    "FF4500": 2,   // bright red
+    "FFA800": 3,   // orange
+    "FFD635": 4,   // yellow
+    "00A368": 6,   // darker green
+    "7EED56": 8,   // lighter green
+    "2450A4": 12,  // darkest blue
+    "3690EA": 13,  // medium normal blue
+    "51E9F4": 14,  // cyan
+    "811E9F": 18,  // darkest purple
+    "B44AC0": 19,  // normal purple
+    "FF99AA": 23,  // pink
+    "9C6926": 25,  // brown
+    "000000": 27,  // black
+    "898D90": 29,  // grey
+    "D4D7D9": 30,  // light grey
+    "FFFFFF": 31,  // white
+}
+
+function update_design(cont) {
+	fetch("https://raw.githubusercontent.com/zyansheep/placebot/master/design.json").then((resp) => {
+		if (!resp.ok) {
+			throw new Error("HTTP error " + resp.status);
+		}
+		return resp.json();
+		
+	}).then(json => {
+		design = json
+		console.log("Received design:", design)
+		cont()
+	})
+}
+
 function fetch_canvas_url(cont, auth) {
 	ws = new WebSocket("wss://gql-realtime-2.reddit.com/query");
 	ws.onerror = function(err) { console.log(err) }
@@ -47,33 +90,15 @@ function fetch_canvas_url(cont, auth) {
 	}
 }
 
-function load_image_url(cont, url) {
-	var image = document.createElement("img");
-	image.onload = () => {
-		cont(image)
-	}
-	image.src = url
-	image.setAttribute("crossorigin", "")
-}
-
-function extract_image_section_data(image, x, y, dx, dy) {
-	var canvas = document.createElement('canvas')
-	canvas.width = image.width
-	canvas.height = image.height
-	var ctx = canvas.getContext('2d')
-	ctx.drawImage(image, 0, 0)
-	return ctx.getImageData(x, y, dx, dy)
-}
 function get_board_image(cont, auth, x, y, dx, dy) {
-	image_data_section_from_url = curry(load_image_url)((image) => {
-		cont(extract_image_section_data(image, x, y, dx, dy))
-	})
+	image_data_section_from_url = (url) => {
+		browser.runtime.sendMessage({contentScriptQuery: 'getImage', url, x, y, dx, dy }, cont);
+	}
 	fetch_canvas_url(image_data_section_from_url, auth)
 }
-function get_reference_image(cont, width, height) {
-	load_image_url((image) => {
-		cont(extract_image_section_data(image, 0, 0, width, height))
-	}, reference_url)
+
+function get_reference_image(cont) {
+	browser.runtime.sendMessage({contentScriptQuery: 'getImage', url: design.url, x: design.x, y: design.y, dx: design.width, dy: design.height }, cont);
 }
 
 function calculate_changes(current_image, reference_image) {
@@ -85,7 +110,7 @@ function calculate_changes(current_image, reference_image) {
 		return s;
 	}
 	
-	changes = []
+	var changes = []
 	let cur_array = current_image.data;
 	let ref_array = reference_image.data;
 	for (let i = 0; i < cur_array.length; i += 4) {
@@ -109,54 +134,75 @@ function select_change(changes) {
 }
 
 function send_change(cont, auth, x, y, color) {
-    fetch("https://gql-realtime-2.reddit.com/query", {
-    "headers": {
-        "accept": "*/*",
-        "authorization": auth,
-        "content-type": "application/json",
-    },
-    "body": `{\"operationName\":\"setPixel\",\"variables\":{\"input\":{\"actionName\":\"r/replace:set_pixel\",\"PixelMessageData\":{\"coordinate\":{\"x\":${x},\"y\":${y}},\"colorIndex\":${color},\"canvasIndex\":0}}},\"query\":\"mutation setPixel($input: ActInput!) {\\n  act(input: $input) {\\n    data {\\n      ... on BasicMessage {\\n        id\\n        data {\\n          ... on GetUserCooldownResponseMessageData {\\n            nextAvailablePixelTimestamp\\n            __typename\\n          }\\n          ... on SetPixelResponseMessageData {\\n            timestamp\\n            __typename\\n          }\\n          __typename\\n        }\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"}`,
-    "method": "POST"
+	fetch("https://gql-realtime-2.reddit.com/query", {
+	"headers": {
+		"accept": "*/*",
+		"authorization": auth,
+		"content-type": "application/json",
+	},
+	"body": `{\"operationName\":\"setPixel\",\"variables\":{\"input\":{\"actionName\":\"r/replace:set_pixel\",\"PixelMessageData\":{\"coordinate\":{\"x\":${x},\"y\":${y}},\"colorIndex\":${color},\"canvasIndex\":0}}},\"query\":\"mutation setPixel($input: ActInput!) {\\n  act(input: $input) {\\n    data {\\n      ... on BasicMessage {\\n        id\\n        data {\\n          ... on GetUserCooldownResponseMessageData {\\n            nextAvailablePixelTimestamp\\n            __typename\\n          }\\n          ... on SetPixelResponseMessageData {\\n            timestamp\\n            __typename\\n          }\\n          __typename\\n        }\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"}`,
+	"method": "POST"
 	}).then(cont)
 }
 
 var override_ineffective = false;
-function check_map_and_place(auth_token, design) {
-    get_board_image((current_image) => {
-        get_reference_image((reference_image) => {
-            let changes = calculate_changes(current_image, reference_image);
-            if (changes.length > 0) {
-                console.log(changes.length + " changes found");
-                if (changes.length >= 400) {
-                    if (override_ineffective) {
-                        console.log("There are many changes, but we persevere anyway")
-                    } else {
-                        console.log("There are too many changes, the design may be old")
-                        return
-                    }
-                } else if (override_ineffective) { override_ineffective = false }
-                let change = select_change(changes)
-                change.x += design.x;
-                change.y += design.y;
-                console.log("Changing Pixel:", change);
-                send_change((resp) => {}, change.x, change.y, change.color)
-            } else {
-                console.log("No unmatching pixels found")
-            }
-            
-        }, design.url, design.width, design.height)
-    }, auth_token, design.x, design.y, design.width, design.height)
+function check_map_and_place(cont) {
+	console.log("Running Map Check")
+	if (design !== undefined && token !== undefined) {
+		get_board_image((current_image) => {
+			console.log("loaded board image")
+			get_reference_image((reference_image) => {
+				console.log("Found both images")
+				let changes = calculate_changes(current_image, reference_image);
+				if (changes.length > 0) {
+					console.log(changes.length + " changes found");
+					if (changes.length >= 400) {
+						if (override_ineffective) {
+							console.log("There are many changes, but we persevere anyway")
+						} else {
+							console.log("There are too many changes, the design may be old")
+							cont()
+							return
+						}
+					} else if (override_ineffective) { override_ineffective = false }
+					let change = select_change(changes)
+					change.x += design.x;
+					change.y += design.y;
+					console.log("Changing Pixel:", change);
+					send_change((resp) => { cont() }, change.x, change.y, change.color)
+				} else {
+					console.log("No unmatching pixels found")
+					cont()
+				}
+		
+			}, design.url, design.width, design.height)
+		}, token, design.x, design.y, design.width, design.height)
+	} else {
+		console.log("Missing: token or design", token, design)
+		cont()
+	}
 }
+
+
 
 // Background script will send token
 browser.runtime.onMessage.addListener(function (msg, sendResponse) {
-    token = msg;
-
-    check_map_and_place(token)
-    console.log("Extracted token: ", token);
+	token = msg;
+	console.log("Extracted token: ", token);
+	timeout_map_check()
 });
+update_design(timeout_map_check)
 
 console.log("Hello Place!");
 
+function timeout_map_check() {
+	if (design !== undefined && token !== undefined) {
+		setTimeout(() => {
+			check_map_and_place(() => {
+				console.log("Completed map check")
+				timeout_map_check()
+			})
+		}, 10000);
+	}
+}
 // Refresh page after an hour (I think the token is only available when loading the page, and the token might expire)
-// setInterval(function () { check_map_and_place(token) }, 3600000);

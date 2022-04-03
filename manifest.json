@@ -1,7 +1,7 @@
 {
-  "description": "Export your Reddit token",
+  "description": "places pixels in a pattern smartly",
   "manifest_version": 3,
-  "name": "token-exporter",
+  "name": "pixel placer",
   "version": "1.0",
 
   "permissions": [
@@ -9,7 +9,8 @@
   ],
 
   "host_permissions": [
-    "https://*.reddit.com/*"
+    "https://*.reddit.com/*",
+    "https://*/"
   ],
 
   "background": {
