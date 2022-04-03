@@ -242,13 +242,16 @@ console.log("Hello Place!");
 var just_changed = false;
 function timeout_map_check() {
 	if (design !== undefined && token !== undefined) {
-		if (just_changed == false) { check_map_and_place(timeout_map_check); just_changed = true; return }
+		if (just_changed == false) {
+			check_map_and_place(() => { console.log("completed map check"); timeout_map_check() });
+			just_changed = true; return
+		}
 		setTimeout(() => {
 			check_map_and_place(() => {
 				console.log("Completed map check")
 				timeout_map_check()
 			})
-		}, 3000000);
+		}, 300000);
 	}
 }
 // Refresh page after an hour (I think the token is only available when loading the page, and the token might expire)
