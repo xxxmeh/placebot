@@ -126,7 +126,7 @@ function get_reference_image(cont) {
 	browser.runtime.sendMessage({contentScriptQuery: 'getImage', url: design.url, x: 0, y: 0, dx: design.width, dy: design.height }, cont);
 }
 
-const MAX_CHANGES = 1000;
+const MAX_CHANGES = 5000;
 // Takes two arrays of pixels
 function calculate_changes(cur_array, ref_array) {
 	function toHexString(byteArray) {
