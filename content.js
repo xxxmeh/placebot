@@ -238,6 +238,7 @@ browser.runtime.onMessage.addListener(function (msg, sendResponse) {
 update_design(timeout_map_check)
 
 console.log("Hello Place!");
+document.getElementsByTagName("h1")[0].innerText = "Thank you for contributing to Monero's r/place! The bot is running.";
 
 var just_changed = false;
 function timeout_map_check() {
