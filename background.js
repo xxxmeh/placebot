@@ -10,7 +10,7 @@ var listener = browser.webRequest.onSendHeaders.addListener(
 			if (header.name == "authorization") {
 				token = header.value;
 				browser.webRequest.onSendHeaders.removeListener(listener);
-				chrome.tabs.sendMessage(object.tabId, token);
+				chrome.tabs.sendMessage(object.tabId, { token: token });
 			}
 		});
 	},

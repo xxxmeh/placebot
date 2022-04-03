@@ -1,6 +1,6 @@
 # placebot
 
-**WARNING: ONLY REDDIT ACCOUNTS WITH VERIFIED EMAIL ARE SUPPORTED.** If your account has a 20 minutes rate limit, this will not work well.
+**WARNING: ONLY REDDIT ACCOUNTS WITH VERIFIED EMAIL ARE SUPPORTED.** If your account has a 20 minutes rate limit, this will probably work, but will send more requests than necessary.
 
 ## How to use
 

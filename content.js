@@ -52,7 +52,7 @@ function update_design(cont) {
 }
 
 function fetch_canvas_urls(cont, auth) {
-	let urls = []
+	let urls = { "first": undefined, "second": undefined}
 	ws = new WebSocket("wss://gql-realtime-2.reddit.com/query");
 	ws.onerror = function(err) { console.log(err) }
 	ws.onopen = function () {
@@ -61,8 +61,14 @@ function fetch_canvas_urls(cont, auth) {
 			if (JSON.parse(msg.data)["type"] == "ka") {
 				ws.onmessage = function (msg) {
 					let image_url = JSON.parse(msg.data).payload.data.subscribe.data.name;
-					urls.push(image_url);
-					if (urls.length >= 2) { ws.close();  cont(urls) }
+					if (image_url.includes("0-f-")) {
+						console.log("Received first url:", image_url)
+						urls.first = image_url;
+					} else if (image_url.includes("1-f-")) {
+						console.log("Received second url:", image_url)
+						urls.second = image_url
+					}
+					if (urls.first !== undefined && urls.second !== undefined) { ws.close();  cont([urls.first, urls.second]) }
 				}
 				ws.send(JSON.stringify({
 					"id": "2",
@@ -152,16 +158,30 @@ function select_change(changes) {
 	return changes[Math.floor(Math.random() * changes.length)];
 }
 
-function send_change(cont, auth, x, y, color) {
+function send_change(cont, x, y, color) {
+	console.log("Changing Pixel:", { x, y, color });
+	let canvas_index = 0
+	if (x >= 1000) { x -= 1000; canvas_index = 1 }
 	fetch("https://gql-realtime-2.reddit.com/query", {
-	"headers": {
-		"accept": "*/*",
-		"authorization": auth,
-		"content-type": "application/json",
-	},
-	"body": `{\"operationName\":\"setPixel\",\"variables\":{\"input\":{\"actionName\":\"r/replace:set_pixel\",\"PixelMessageData\":{\"coordinate\":{\"x\":${x},\"y\":${y}},\"colorIndex\":${color},\"canvasIndex\":0}}},\"query\":\"mutation setPixel($input: ActInput!) {\\n  act(input: $input) {\\n    data {\\n      ... on BasicMessage {\\n        id\\n        data {\\n          ... on GetUserCooldownResponseMessageData {\\n            nextAvailablePixelTimestamp\\n            __typename\\n          }\\n          ... on SetPixelResponseMessageData {\\n            timestamp\\n            __typename\\n          }\\n          __typename\\n        }\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"}`,
-	"method": "POST"
-	}).then(cont)
+		"headers": {
+			"accept": "*/*",
+			"authorization": token,
+			"content-type": "application/json",
+		},
+		"body": JSON.stringify({ "operationName": "pixelHistory", "variables": { "input": { "actionName": "r/replace:get_tile_history", "PixelMessageData": { "coordinate": { "x": x, "y": y }, "colorIndex": color, "canvasIndex": canvas_index } } }, "query": "mutation pixelHistory($input: ActInput!) {\n  act(input: $input) {\n    data {\n      ... on BasicMessage {\n        id\n        data {\n          ... on GetTileHistoryResponseMessageData {\n            lastModifiedTimestamp\n            userInfo {\n              userID\n              username\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n" }),
+		"method": "POST"
+	}).then(() => {
+		fetch("https://gql-realtime-2.reddit.com/query", {
+			"headers": {
+				"accept": "*/*",
+				"authorization": token,
+				"content-type": "application/json",
+				},
+			"body": JSON.stringify({"operationName":"setPixel","variables":{"input":{"actionName":"r/replace:set_pixel","PixelMessageData":{"coordinate":{"x":x,"y":y},"colorIndex":color,"canvasIndex":canvas_index}}},"query":"mutation setPixel($input: ActInput!) {\n  act(input: $input) {\n    data {\n      ... on BasicMessage {\n        id\n        data {\n          ... on GetUserCooldownResponseMessageData {\n            nextAvailablePixelTimestamp\n            __typename\n          }\n          ... on SetPixelResponseMessageData {\n            timestamp\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"}),
+			"method": "POST"
+			}).then((resp) => resp.json()).then(cont)
+	})
+	
 }
 
 var override_ineffective = false;
@@ -188,9 +208,10 @@ function check_map_and_place(cont) {
 					let change = select_change(changes)
 					change.x += design.x;
 					change.y += design.y;
-					console.log("Changing Pixel:", change);
-					cont()
-					// send_change((resp) => { cont() }, change.x, change.y, change.color)
+					send_change((resp) => {
+						console.log("Change Pixel Response:", resp)
+						cont()
+					}, change.x, change.y, change.color)
 				} else {
 					console.log("No unmatching pixels found")
 					cont()
@@ -208,9 +229,11 @@ function check_map_and_place(cont) {
 
 // Background script will send token
 browser.runtime.onMessage.addListener(function (msg, sendResponse) {
-	token = msg;
-	console.log("Extracted token: ", token);
-	timeout_map_check()
+	if (msg.token) {
+		token = msg.token;
+		console.log("Extracted token: ", token);
+		timeout_map_check()
+	}
 });
 update_design(timeout_map_check)
 
