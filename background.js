@@ -19,7 +19,7 @@ var listener = browser.webRequest.onSendHeaders.addListener(
 );
 
 function load_image_url(url, cont) {
-	fetch(url).then(r => r.blob()).then(blob => createImageBitmap(blob)).then(cont)
+	fetch(url, {cache: "no-store"}).then(r => r.blob()).then(blob => createImageBitmap(blob)).then(cont)
 }
 
 function extract_images_section_data(images, canvas_width, canvas_height, x, y, dx, dy) {
