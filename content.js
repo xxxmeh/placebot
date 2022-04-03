@@ -242,7 +242,7 @@ function check_map_and_place(cont) {
                             }
                             else if (resp.data) {
                                 pixels_placed_counter += 1;
-                                document.getElementsByTagName("h1")[0].innerText = `Pixels Placed: ${pixels_placed_counter}`;
+                                notif(`Pixels Placed: ${pixels_placed_counter}`);
                                 let innerData = resp.data.act.data;
                                 if (innerData.length === 1) {
                                     if(innerData[0].data) {
@@ -304,8 +304,8 @@ var firstRun = true;
 function timeout_map_check(waitTime) {
     if (firstRun === false) {
         if (waitTime < minInterval) {
-            console.error("Wait time too short! Exiting");
-            return
+            console.log("Wait time too short, increasing to min wait time.");
+            waitTime = minInterval;
         }
         if (waitTime > maxInterval) {
             console.error("Wait time too long. Is the account blocked?");
