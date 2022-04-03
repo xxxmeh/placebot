@@ -304,8 +304,8 @@ var firstRun = true;
 function timeout_map_check(waitTime) {
     if (firstRun === false) {
         if (waitTime < minInterval) {
-            console.error("Wait time too short! Exiting");
-            return
+            console.log("Wait time too short, increasing to min wait time.");
+            waitTime = minInterval;
         }
         if (waitTime > maxInterval) {
             console.error("Wait time too long. Is the account blocked?");
