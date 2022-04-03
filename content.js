@@ -53,7 +53,7 @@ function update_design(cont) {
 			notif("YOUR VERSION IS OUTDATED! PLEASE UPDATE TO THE NEWEST ONE")
 			notif_sub(`<a href="https://github.com/zyansheep/placebot">https://github.com/zyansheep/placebot</a>`);
 		}
-		cont(100); // initial delay
+		cont(2000); // initial delay should hopefully be long enough to fetch down new design
 	})
 }
 
