@@ -4,6 +4,7 @@ if (typeof browser === "undefined") {
 
 var design = undefined
 var token = undefined;
+const version = 1.0
 
 // Functional programming is neat
 function curry(func) {
@@ -47,6 +48,10 @@ function update_design(cont) {
 	}).then(json => {
 		design = json
 		console.log("Received design:", design)
+		if (design.stableVersion != version){
+			console.log("YOUR VERSION IS OUTDATED! please update to the newest one!")
+			console.log("https://github.com/zyansheep/placebot")
+		}
 		cont()
 	})
 }
