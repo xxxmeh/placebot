@@ -205,7 +205,7 @@ function send_change(cont, x, y, color) {
 var override_ineffective = false;
 function check_map_and_place(cont) {
 	console.log("Running Map Check")
-	if (design !== undefined && token !== undefined) {
+	if (design !== undefined || token !== undefined) {
 		get_board_image((current_image) => {
 			console.log("loaded board image")
 			get_reference_image((reference_image) => {
