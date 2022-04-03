@@ -259,6 +259,7 @@ function timeout_map_check() {
 				console.log("Completed map check")
 				timeout_map_check()
 			})
+			update_design()
 		}, 301000);
 	}
 }
