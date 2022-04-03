@@ -91,16 +91,16 @@ function fetch_canvas_url(cont, auth) {
 }
 
 function get_board_image(cont, auth, x, y, dx, dy) {
-	image_data_section_from_url = (url) => {
-		browser.runtime.sendMessage({contentScriptQuery: 'getImage', url, x, y, dx, dy }, cont);
-	}
-	fetch_canvas_url(image_data_section_from_url, auth)
+	fetch_canvas_url((url) => {
+		browser.runtime.sendMessage({contentScriptQuery: 'getImage', url, x, y, dx, dy }, cont)
+	}, auth)
 }
 
 function get_reference_image(cont) {
 	browser.runtime.sendMessage({contentScriptQuery: 'getImage', url: design.url, x: design.x, y: design.y, dx: design.width, dy: design.height }, cont);
 }
 
+const MAX_CHANGES = 1000;
 function calculate_changes(current_image, reference_image) {
 	function toHexString(byteArray) {
 		var s = '0x';
@@ -111,18 +111,18 @@ function calculate_changes(current_image, reference_image) {
 	}
 	
 	var changes = []
-	let cur_array = current_image.data;
-	let ref_array = reference_image.data;
+	let cur_array = Object.values(current_image.data);
+	let ref_array = Object.values(reference_image.data);
 	for (let i = 0; i < cur_array.length; i += 4) {
-		if (changes.length >= 400) { return changes }
+		if (changes.length >= MAX_CHANGES) { return changes }
 		let cur_array_slice = cur_array.slice(i, i + 4);
 		let ref_array_slice = ref_array.slice(i, i + 4);
 		if (cur_array_slice.every((value, index) => value !== ref_array_slice[index])) {
-			let hex_color = toHexString(reference_image.data.slice(i, i + 4))
+			let hex_color = toHexString(ref_array.slice(i, i + 4)).slice(2, 8)
 			let color = color_map[hex_color.toUpperCase()];
 			if (color) {
-				let col_index = i / 4;
-				changes.push({ x: col_index % reference_image.width, y: Math.floor(col_index / reference_image.width), color })
+				let col_index = Math.floor(i / 4);
+				changes.push({ x: col_index % design.width, y: Math.floor(col_index / design.width), color })
 			}
 		}
 	}
@@ -156,7 +156,7 @@ function check_map_and_place(cont) {
 				let changes = calculate_changes(current_image, reference_image);
 				if (changes.length > 0) {
 					console.log(changes.length + " changes found");
-					if (changes.length >= 400) {
+					if (changes.length >= MAX_CHANGES) {
 						if (override_ineffective) {
 							console.log("There are many changes, but we persevere anyway")
 						} else {
