@@ -51,7 +51,27 @@ function update_design(cont) {
 	})
 }
 
+const CANVAS_REQUEST = {
+    "id": "0",
+    "type": "start",
+    "payload": {
+        "variables": {
+            "input": {
+                "channel": {
+                    "teamOwner": "AFD2022",
+                    "category": "CANVAS",
+                    "tag": "0"
+                }
+            }
+        },
+        "extensions": {},
+        "operationName": "replace",
+        "query": "subscription replace($input: SubscribeInput!) {\n  subscribe(input: $input) {\n    id\n    ... on BasicMessage {\n      data {\n        __typename\n        ... on FullFrameMessageData {\n          __typename\n          name\n          timestamp\n        }\n        ... on DiffFrameMessageData {\n          __typename\n          name\n          currentTimestamp\n          previousTimestamp\n        }\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"
+    }
+}
+
 function fetch_canvas_urls(cont, auth) {
+	let packet_id = 0;
 	let urls = { "first": undefined, "second": undefined}
 	ws = new WebSocket("wss://gql-realtime-2.reddit.com/query");
 	ws.onerror = function(err) { console.log(err) }
@@ -67,45 +87,23 @@ function fetch_canvas_urls(cont, auth) {
 					} else if (image_url.includes("1-f-")) {
 						console.log("Received second url:", image_url)
 						urls.second = image_url
+					} else if (image_url.includes("2-f-")) {
+						console.log("Received third url:", image_url)
+						urls.third = image_url
+					} else if (image_url.includes("3-f-")) {
+						console.log("Received fourth url:", image_url)
+						urls.fourth = image_url
 					}
-					if (urls.first !== undefined && urls.second !== undefined) { ws.close();  cont([urls.first, urls.second]) }
+					if (urls.first && urls.second && urls.third && urls.fourth) { ws.close();  cont([urls.first, urls.second, urls.third, urls.fourth]) }
 				}
-				ws.send(JSON.stringify({
-					"id": "2",
-					"type": "start",
-					"payload": {
-						"variables": {
-							"input": {
-								"channel": {
-									"teamOwner": "AFD2022",
-									"category": "CANVAS",
-									"tag": "0",
-								}
-							}
-						},
-						"extensions": {},
-						"operationName": "replace",
-						"query": "subscription replace($input: SubscribeInput!) {\n  subscribe(input: $input) {\n    id\n    ... on BasicMessage {\n      data {\n        __typename\n        ... on FullFrameMessageData {\n          __typename\n          name\n          timestamp\n        }\n        ... on DiffFrameMessageData {\n          __typename\n          name\n          currentTimestamp\n          previousTimestamp\n        }\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
-					},
-				}))
-				ws.send(JSON.stringify({
-					"id": "3",
-					"type": "start",
-					"payload": {
-						"variables": {
-							"input": {
-								"channel": {
-									"teamOwner": "AFD2022",
-									"category": "CANVAS",
-									"tag": "1",
-								}
-							}
-						},
-						"extensions": {},
-						"operationName": "replace",
-						"query": "subscription replace($input: SubscribeInput!) {\n  subscribe(input: $input) {\n    id\n    ... on BasicMessage {\n      data {\n        __typename\n        ... on FullFrameMessageData {\n          __typename\n          name\n          timestamp\n        }\n        ... on DiffFrameMessageData {\n          __typename\n          name\n          currentTimestamp\n          previousTimestamp\n        }\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
-					},
-				}))
+				let object = {};
+				for (let i = 0; i < 4; i++) {
+					Object.assign(object, CANVAS_REQUEST);
+					packet_id += 1;
+					object.id = packet_id.toString();
+					object.payload.variables.input.channel.tag = i.toString()
+					ws.send(JSON.stringify(object))
+				}
 			}
 		}
 		ws.send(JSON.stringify({
@@ -161,7 +159,16 @@ function select_change(changes) {
 function send_change(cont, x, y, color) {
 	console.log("Changing Pixel:", { x, y, color });
 	let canvas_index = 0
-	if (x >= 1000) { x -= 1000; canvas_index = 1 }
+	if (x >= 1000) {
+		x -= 1000;
+		canvas_index = 1
+		if (y >= 1000) {
+			y -= 1000
+			if (canvas_index == 1) { canvas_index = 3 }
+			else { canvas_index = 2 }
+		}
+	}
+	
 	fetch("https://gql-realtime-2.reddit.com/query", {
 		"headers": {
 			"accept": "*/*",
@@ -184,7 +191,7 @@ function send_change(cont, x, y, color) {
 				pixels_placed_counter += 1;
 				document.getElementsByTagName("h1")[0].innerText = `Pixels Placed: ${pixels_placed_counter}`;
 			}
-			cont(json.data)
+			cont(json)
 		})
 	})
 	
@@ -236,6 +243,7 @@ browser.runtime.onMessage.addListener(function (msg, sendResponse) {
 	if (msg.token) {
 		token = msg.token;
 		console.log("Extracted token: ", token);
+		timeout_map_check()
 	}
 });
 update_design(timeout_map_check)

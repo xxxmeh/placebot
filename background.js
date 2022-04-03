@@ -46,8 +46,18 @@ browser.runtime.onMessage.addListener(
 		} else if (request.contentScriptQuery == 'getBoard') {
 			load_image_url(request.urls[0], (image1) => {
 				load_image_url(request.urls[1], (image2) => {
-					let images = [{ image: image1, x: 0, y: 0 }, { image: image2, x: image1.width, y: 0 }]
-					sendResponse(extract_images_section_data(images, image1.width + image2.width, image1.height, request.x, request.y, request.dx, request.dy))
+					load_image_url(request.urls[2], (image3) => {
+						load_image_url(request.urls[3], (image4) => {
+							let images = [
+								{ image: image1, x: 0, y: 0 },
+								{ image: image2, x: 1000, y: 0 },
+								{ image: image3, x: 0, y: 1000 },
+								{ image: image4, x: 1000, y: 1000 },
+							]
+		
+							sendResponse(extract_images_section_data(images, 2000, 2000, request.x, request.y, request.dx, request.dy))
+						});
+					});
 				});
 			});
 			return true;
