@@ -235,6 +235,7 @@ function check_map_and_place(cont) {
                                         if (waitFor) {
                                             console.log("Rate limiting says to wait for " + waitFor + " ms");
                                             cont(waitFor);
+                                            return;
                                         }
                                     }
                                 }
@@ -253,6 +254,7 @@ function check_map_and_place(cont) {
                                             } else {
                                                 console.log("Told to wait for " + waitFor + " ms before the next change...");
                                                 cont(waitFor);
+                                                return;
                                             }
                                         } else {
                                             console.log("Did not get expected response data[5]. Exiting to make sure we dont get account rate limited");
@@ -264,6 +266,7 @@ function check_map_and_place(cont) {
                                 else if(innerData.length === 2) {
                                     console.log("Normalish operation... using default wait time of " + minInterval + " ms");
                                     cont(minInterval);
+                                    return;
                                 } else {
                                     console.log("Did not get expected response data[3]. Exiting to make sure we dont get account rate limited");
                                 }
