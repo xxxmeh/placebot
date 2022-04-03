@@ -4,7 +4,7 @@ if (typeof browser === "undefined") {
 
 var design = undefined
 var token = undefined;
-const version = 1.0
+const version = 1.1
 
 function notif(notification) {
 	let elem = document.getElementsByTagName("h1")[0]
@@ -265,6 +265,7 @@ var pixels_placed_counter = 0
 var just_changed = false;
 function timeout_map_check() {
 	if (design !== undefined && token !== undefined) {
+		if (stop_running) { return }
 		if (just_changed == false) {
 			just_changed = true;
 			check_map_and_place(() => {
@@ -272,7 +273,6 @@ function timeout_map_check() {
 			});
 			return
 		}
-		if (stop_running) { return }
 		setTimeout(() => {
 			check_map_and_place(() => {
 				console.log("Completed map check")
