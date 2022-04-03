@@ -36,23 +36,24 @@ color_map = {
     "FFFFFF": 31,  // white
 }
 
-var stop_running = false;
+var minInterval = 302100;
+var maxInterval = 1000000000;
+
 function update_design(cont) {
 	fetch("https://raw.githubusercontent.com/zyansheep/placebot/master/design.json", {cache: "no-store"}).then((resp) => {
 		if (!resp.ok) {
 			throw new Error("HTTP error " + resp.status);
 		}
 		return resp.json();
-		
+
 	}).then(json => {
 		design = json
 		console.log("Received design:", design)
 		if (design.stableVersion != version) {
 			notif("YOUR VERSION IS OUTDATED! PLEASE UPDATE TO THE NEWEST ONE")
 			notif_sub(`<a href="https://github.com/zyansheep/placebot">https://github.com/zyansheep/placebot</a>`);
-			stop_running = true
 		}
-		cont()
+		cont(2000); // initial delay should hopefully be long enough to fetch down new design
 	})
 }
 
@@ -139,7 +140,7 @@ function calculate_changes(cur_array, ref_array) {
 		});
 		return s;
 	}
-	
+
 	var changes = []
 	for (let i = 0; i < cur_array.length; i += 4) {
 		if (changes.length >= MAX_CHANGES) { return changes }
@@ -175,7 +176,7 @@ function send_change(cont, x, y, color) {
 			else { canvas_index = 2 }
 		}
 	}
-	
+
 	fetch("https://gql-realtime-2.reddit.com/query", {
 		"headers": {
 			"accept": "*/*",
@@ -194,17 +195,11 @@ function send_change(cont, x, y, color) {
 			"body": JSON.stringify({"operationName":"setPixel","variables":{"input":{"actionName":"r/replace:set_pixel","PixelMessageData":{"coordinate":{"x":place_x,"y":place_y},"colorIndex":color,"canvasIndex":canvas_index}}},"query":"mutation setPixel($input: ActInput!) {\n  act(input: $input) {\n    data {\n      ... on BasicMessage {\n        id\n        data {\n          ... on GetUserCooldownResponseMessageData {\n            nextAvailablePixelTimestamp\n            __typename\n          }\n          ... on SetPixelResponseMessageData {\n            timestamp\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"}),
 			"method": "POST"
 		}).then((resp) => resp.json()).then((json) => {
-			if (json.data) {
-				pixels_placed_counter += 1;
-				notif(`Pixels Placed: ${pixels_placed_counter}`)
-				notif_sub(`Last changed pixel: (${x}, ${y}) to color id ${color}`)
-			} else {
-				notif_sub(`Failed to change pixel (Waiting for timeout)`)
-			}
+			console.log("Change Pixel Response:", json)
 			cont(json)
 		})
 	})
-	
+
 }
 
 var override_ineffective = false;
@@ -224,7 +219,7 @@ function check_map_and_place(cont) {
 							notif_sub("There are a lot of changes")
 						} else {
 							notif_sub("There are too many changes, check if the design is old or invalid or change the MAX_CHANGES variable")
-							cont()
+							cont(minInterval)
 							return
 						}
 					} else if (override_ineffective) { override_ineffective = false }
@@ -232,29 +227,72 @@ function check_map_and_place(cont) {
 					change.x += design.x;
 					change.y += design.y;
 					send_change((resp) => {
-						console.log("Change Pixel Response:", resp)
-						cont()
+                        if(resp) {
+                            if(resp.errors) {
+                                if(resp.errors[0].message === "Ratelimited") {
+                                    if(resp.errors[0].extensions) {
+                                        let waitFor = resp.errors[0].extensions.nextAvailablePixelTs - new Date();
+                                        if (waitFor) {
+                                            console.log("Rate limiting says to wait for " + waitFor + " ms");
+                                            cont(waitFor);
+                                        }
+                                    }
+                                }
+                                console.log("Rate limited but don't know how long to wait, exiting");
+                            }
+                            else if (resp.data) {
+                                pixels_placed_counter += 1;
+                                document.getElementsByTagName("h1")[0].innerText = `Pixels Placed: ${pixels_placed_counter}`;
+                                let innerData = resp.data.act.data;
+                                if (innerData.length === 1) {
+                                    if(innerData[0].data) {
+                                        if(innerData[0].nextAvailablePixelTimestamp) {
+                                            let waitFor = innerData[0].nextAvailablePixelTimestamp - new Date()
+                                            if (waitFor < minInterval) {
+                                                console.log("Exiting, got a next available time which is less than expected " + waitFor)
+                                            } else {
+                                                console.log("Told to wait for " + waitFor + " ms before the next change...");
+                                                cont(waitFor);
+                                            }
+                                        } else {
+                                            console.log("Did not get expected response data[5]. Exiting to make sure we dont get account rate limited");
+                                        }
+                                    } else {
+                                        console.log("Did not get expected response data[4]. Exiting to make sure we dont get account rate limited");
+                                    }
+                                }
+                                else if(innerData.length === 2) {
+                                    console.log("Normalish operation... using default wait time of " + minInterval + " ms");
+                                    cont(minInterval);
+                                } else {
+                                    console.log("Did not get expected response data[3]. Exiting to make sure we dont get account rate limited");
+                                }
+                            } else {
+                                console.log("Did not get expected response data[2]. Exiting to make sure we dont get account rate limited");
+                            }
+                        } else {
+                            console.log("Did not get expected response data[1]. Exiting to make sure we dont get account rate limited");
+                        }
 					}, change.x, change.y, change.color)
 				} else {
 					console.log("No unmatching pixels found")
-					cont()
+					cont(minInterval)
 				}
-		
+
 			}, design.url, design.width, design.height)
 		}, token, design.x, design.y, design.width, design.height)
 	} else {
-		console.log("Missing: token or design", token, design)
-		cont()
+		console.log("Exiting: missing token or design", token, design)
 	}
 }
 
 // Background script will send token
-browser.runtime.onMessage.addListener(function (msg, sendResponse) {
+browser.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
 	if (msg.token) {
 		token = msg.token;
 		console.log("Extracted token: ", token);
-		timeout_map_check()
 	}
+    sendResponse({});
 });
 update_design(timeout_map_check)
 
@@ -262,23 +300,21 @@ console.log("Hello Place!");
 notif("Thank you for contributing to Monero's r/place! The bot is running.");
 
 var pixels_placed_counter = 0
-var just_changed = false;
-function timeout_map_check() {
-	if (design !== undefined && token !== undefined) {
-		if (stop_running) { return }
-		if (just_changed == false) {
-			just_changed = true;
-			check_map_and_place(() => {
-				console.log("Completed first map check"); timeout_map_check()
-			});
-			return
-		}
-		setTimeout(() => {
-			check_map_and_place(() => {
-				console.log("Completed map check")
-				update_design(timeout_map_check)
-			})
-		}, 301000);
-	}
+var firstRun = true;
+function timeout_map_check(waitTime) {
+    if (firstRun === false) {
+        if (waitTime < minInterval) {
+            console.error("Wait time too short! Exiting");
+            return
+        }
+        if (waitTime > maxInterval) {
+            console.error("Wait time too long. Is the account blocked?");
+            return;
+        }
+    }
+    firstRun = false;
+    console.log("Starting timer for another iteration...")
+    setTimeout(() => {
+        check_map_and_place(timeout_map_check)
+    }, waitTime);
 }
-// Refresh page after an hour (I think the token is only available when loading the page, and the token might expire)
