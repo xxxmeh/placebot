@@ -9,7 +9,9 @@
 - Go to your extension page (chrome://extensions/)
 - Load the unpacked extension. You might have to enable developer mode
 - Go to /r/place
-- You should see an alert message saying the bot is running. If it doesn't, reload the extension and the page (please fix the issue if you know how to)
+- Press CTRL-SHIFT-I to open up developer tools and go to the console page. You should see something like this:
+
+![run_demo](run_demo.png)
 
 ## Use multiple accounts
 
