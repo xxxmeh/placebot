@@ -179,7 +179,13 @@ function send_change(cont, x, y, color) {
 				},
 			"body": JSON.stringify({"operationName":"setPixel","variables":{"input":{"actionName":"r/replace:set_pixel","PixelMessageData":{"coordinate":{"x":x,"y":y},"colorIndex":color,"canvasIndex":canvas_index}}},"query":"mutation setPixel($input: ActInput!) {\n  act(input: $input) {\n    data {\n      ... on BasicMessage {\n        id\n        data {\n          ... on GetUserCooldownResponseMessageData {\n            nextAvailablePixelTimestamp\n            __typename\n          }\n          ... on SetPixelResponseMessageData {\n            timestamp\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"}),
 			"method": "POST"
-			}).then((resp) => resp.json()).then(cont)
+		}).then((resp) => resp.json()).then((json) => {
+			if (json.data) {
+				pixels_placed_counter += 1;
+				document.getElementsByTagName("h1")[0].innerText = `Pixels Placed: ${pixels_placed_counter}`;
+			}
+			cont(json.data)
+		})
 	})
 	
 }
@@ -225,8 +231,6 @@ function check_map_and_place(cont) {
 	}
 }
 
-
-
 // Background script will send token
 browser.runtime.onMessage.addListener(function (msg, sendResponse) {
 	if (msg.token) {
@@ -240,12 +244,16 @@ update_design(timeout_map_check)
 console.log("Hello Place!");
 document.getElementsByTagName("h1")[0].innerText = "Thank you for contributing to Monero's r/place! The bot is running.";
 
+var pixels_placed_counter = 0
 var just_changed = false;
 function timeout_map_check() {
 	if (design !== undefined && token !== undefined) {
 		if (just_changed == false) {
-			check_map_and_place(() => { console.log("completed map check"); timeout_map_check() });
-			just_changed = true; return
+			just_changed = true;
+			check_map_and_place(() => {
+				console.log("completed map check"); timeout_map_check()
+			});
+			return
 		}
 		setTimeout(() => {
 			check_map_and_place(() => {
