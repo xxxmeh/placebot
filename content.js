@@ -13,6 +13,7 @@ function notif(notification) {
 }
 function notif_sub(notification) {
 	let elem = document.getElementsByTagName("h2")[0]
+	document.title = notification;
 	elem.innerText = notification;
 }
 
@@ -161,13 +162,15 @@ function select_change(changes) {
 }
 
 function send_change(cont, x, y, color) {
+	let place_x = x;
+	let place_y = y;
 	console.log("Changing Pixel:", { x, y, color });
 	let canvas_index = 0
-	if (x >= 1000) {
-		x -= 1000;
+	if (place_x >= 1000) {
+		place_x -= 1000;
 		canvas_index = 1
-		if (y >= 1000) {
-			y -= 1000
+		if (place_y >= 1000) {
+			place_y -= 1000
 			if (canvas_index == 1) { canvas_index = 3 }
 			else { canvas_index = 2 }
 		}
@@ -188,7 +191,7 @@ function send_change(cont, x, y, color) {
 				"authorization": token,
 				"content-type": "application/json",
 				},
-			"body": JSON.stringify({"operationName":"setPixel","variables":{"input":{"actionName":"r/replace:set_pixel","PixelMessageData":{"coordinate":{"x":x,"y":y},"colorIndex":color,"canvasIndex":canvas_index}}},"query":"mutation setPixel($input: ActInput!) {\n  act(input: $input) {\n    data {\n      ... on BasicMessage {\n        id\n        data {\n          ... on GetUserCooldownResponseMessageData {\n            nextAvailablePixelTimestamp\n            __typename\n          }\n          ... on SetPixelResponseMessageData {\n            timestamp\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"}),
+			"body": JSON.stringify({"operationName":"setPixel","variables":{"input":{"actionName":"r/replace:set_pixel","PixelMessageData":{"coordinate":{"x":place_x,"y":place_y},"colorIndex":color,"canvasIndex":canvas_index}}},"query":"mutation setPixel($input: ActInput!) {\n  act(input: $input) {\n    data {\n      ... on BasicMessage {\n        id\n        data {\n          ... on GetUserCooldownResponseMessageData {\n            nextAvailablePixelTimestamp\n            __typename\n          }\n          ... on SetPixelResponseMessageData {\n            timestamp\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"}),
 			"method": "POST"
 		}).then((resp) => resp.json()).then((json) => {
 			if (json.data) {

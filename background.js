@@ -42,7 +42,7 @@ browser.runtime.onMessage.addListener(
 			load_image_url(request.url, (image) => {
 				sendResponse(extract_images_section_data([{ image: image, x: 0, y: 0 }], image.width, image.height, request.x, request.y, request.dx, request.dy))
 			})
-			return true;  // Will respond asynchronously.
+			return true
 		} else if (request.contentScriptQuery == 'getBoard') {
 			load_image_url(request.urls[0], (image1) => {
 				load_image_url(request.urls[1], (image2) => {
@@ -60,9 +60,7 @@ browser.runtime.onMessage.addListener(
 					});
 				});
 			});
-			return true;
-		} else {
-			return false;
-		}
+			return true
+		} else { return true }
 	}
 );
