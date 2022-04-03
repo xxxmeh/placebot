@@ -7,7 +7,7 @@ var token = undefined;
 var listener = browser.webRequest.onSendHeaders.addListener(
     function(object) {
         object.requestHeaders.forEach(function(header) {
-            if (header.name == "Authorization") {
+            if (header.name == "authorization") {
                 token = header.value;
                 browser.webRequest.onSendHeaders.removeListener(listener);
                 chrome.tabs.sendMessage(object.tabId, token);
