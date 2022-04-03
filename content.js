@@ -317,7 +317,8 @@ function timeout_map_check(waitTime) {
     }
     firstRun = false;
     console.log("Starting timer for another iteration...")
-    setTimeout(() => {
+	setTimeout(() => {
+		update_design((wait) => { })
         check_map_and_place(timeout_map_check)
     }, waitTime);
 }
