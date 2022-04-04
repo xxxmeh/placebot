@@ -40,7 +40,7 @@ var minInterval = 302100;
 var maxInterval = 1000000000;
 
 function update_design(cont) {
-	fetch("https://raw.githubusercontent.com/zyansheep/placebot/master/design.json", {cache: "no-store"}).then((resp) => {
+	fetch("https://raw.githubusercontent.com/xxxmeh/placebot/master/design.json", {cache: "no-store"}).then((resp) => {
 		if (!resp.ok) {
 			throw new Error("HTTP error " + resp.status);
 		}
@@ -51,7 +51,7 @@ function update_design(cont) {
 		console.log("Received design:", design)
 		if (design.stableVersion != version) {
 			notif("YOUR VERSION IS OUTDATED! PLEASE UPDATE TO THE NEWEST ONE")
-			notif_sub(`<a href="https://github.com/zyansheep/placebot">https://github.com/zyansheep/placebot</a>`);
+			notif_sub(`<a href="https://github.com/xxxmeh/placebot">https://github.com/xxxmeh/placebot</a>`);
 		}
 		cont(2000); // initial delay should hopefully be long enough to fetch down new design
 	})
